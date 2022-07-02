@@ -1,5 +1,7 @@
 # Seqy
 
+[![Hex.pm Version](https://img.shields.io/hexpm/v/seqy?style=for-the-badge)](https://hex.pm/packages/seqy)
+
 Seqy is an events sequentializer. Need to process events in a specific order? Seqy can help.
 
 ## Under Seqy's Hood
