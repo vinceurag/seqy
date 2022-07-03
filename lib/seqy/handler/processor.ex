@@ -15,7 +15,9 @@ defmodule Seqy.Handler.Processor do
         {:noreply, %{state | events: new_events}}
 
       current_event ->
-        apply(config.handler, :handle, [current_event])
+        response = apply(config.handler, :handle, [current_event])
+
+        notify(response, Map.get(state.listeners, current_event.id))
 
         do_process_event(%{
           state
@@ -26,4 +28,10 @@ defmodule Seqy.Handler.Processor do
   end
 
   defp do_process_event(%{events: _, actions: []} = state), do: {:stop, :normal, state}
+
+  defp notify(_response, nil), do: :noop
+
+  defp notify(response, caller_pid) do
+    send(caller_pid, {:response, response})
+  end
 end

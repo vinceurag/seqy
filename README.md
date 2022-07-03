@@ -37,7 +37,7 @@ end
 
 ## Configuration
 
-To make Seqy work, you need to define the topic, events and handler module.
+To make Seqy work, you need to define the topic of the sequence, event actions (in order) and handler module.
 
 ```elixir
 config :seqy,

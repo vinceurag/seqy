@@ -6,21 +6,21 @@ defmodule Seqy do
 
   ```elixir
   defmodule MyApp.EventHandler do
-  use Seqy.Handler
+    use Seqy.Handler
 
-  require Logger
+    require Logger
 
-  def handle(%Seqy.Event{action: :"user.created", args: %{user_id: user_id}}) do
-    Logger.info("\#{user_id} has been created.")
-  end
+    def handle(%Seqy.Event{action: :"user.created", args: %{user_id: user_id}}) do
+      Logger.info("\#{user_id} has been created.")
+    end
 
-  def handle(%Seqy.Event{action: :"user.purchased", args: %{user_id: user_id}}) do
-    Logger.info("\#{user_id} has purchased an item.")
-  end
+    def handle(%Seqy.Event{action: :"user.purchased", args: %{user_id: user_id}}) do
+      Logger.info("\#{user_id} has purchased an item.")
+    end
 
-  def handle(%Seqy.Event{action: :"user.paid", args: %{user_id: user_id}}) do
-    Logger.info("\#{user_id} has paid.")
-  end
+    def handle(%Seqy.Event{action: :"user.paid", args: %{user_id: user_id}}) do
+      Logger.info("\#{user_id} has paid.")
+    end
   end
   ```
 
@@ -64,6 +64,30 @@ defmodule Seqy do
   """
   @spec enqueue(event :: Event.t()) :: :ok
   def enqueue(%Event{} = event) do
+    do_enqueue(event)
+
+    :ok
+  end
+
+  @doc """
+  Enqueues a new event for processing and waits until the event gets processed or until
+  the timeout lapses.
+  """
+  @spec enqueue_await(Seqy.Event.t(), timeout_in_ms :: pos_integer()) ::
+          term() | {:error, :timeout}
+  def enqueue_await(%Event{} = event, timeout_in_ms \\ 5_000) do
+    do_enqueue(event, wait: true)
+
+    receive do
+      {:response, response} ->
+        response
+    after
+      timeout_in_ms -> {:error, :timeout}
+    end
+  end
+
+  defp do_enqueue(%Event{} = event, opts \\ []) do
+    caller_pid = if opts[:wait], do: self()
     topic_config = get_topic_config(event.topic)
 
     case Processbook.get(event.topic, event.queue_id) do
@@ -75,13 +99,11 @@ defmodule Seqy do
           )
 
         Processbook.store(event.topic, event.queue_id, queue_pid)
-        apply(topic_config.handler, :process, [queue_pid, event])
+        apply(topic_config.handler, :process, [queue_pid, event, caller_pid])
 
       queue_pid ->
-        apply(topic_config.handler, :process, [queue_pid, event])
+        apply(topic_config.handler, :process, [queue_pid, event, caller_pid])
     end
-
-    :ok
   end
 
   defp get_topic_config(topic_name) do

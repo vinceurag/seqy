@@ -5,5 +5,7 @@ defmodule Seqy.Support.FakeHandler do
   def handle(%Seqy.Event{action: action}) do
     test_process = Process.whereis(:test_process)
     send(test_process, action)
+
+    {:ok, action}
   end
 end
